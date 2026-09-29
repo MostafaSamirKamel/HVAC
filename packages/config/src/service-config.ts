@@ -32,18 +32,18 @@ export const defaultServicePorts = {
 
 export function getServiceEndpoints(): ServiceEndpoints {
   return {
-    identity: process.env.IDENTITY_SERVICE_URL || `http://localhost:${defaultServicePorts.identity}`,
-    inventory: process.env.INVENTORY_SERVICE_URL || `http://localhost:${defaultServicePorts.inventory}`,
-    purchasing: process.env.PURCHASING_SERVICE_URL || `http://localhost:${defaultServicePorts.purchasing}`,
-    customer: process.env.CUSTOMER_SERVICE_URL || `http://localhost:${defaultServicePorts.customer}`,
-    sales: process.env.SALES_SERVICE_URL || `http://localhost:${defaultServicePorts.sales}`,
-    installment: process.env.INSTALLMENT_SERVICE_URL || `http://localhost:${defaultServicePorts.installment}`,
-    finance: process.env.FINANCE_SERVICE_URL || `http://localhost:${defaultServicePorts.finance}`,
-    technician: process.env.TECHNICIAN_SERVICE_URL || `http://localhost:${defaultServicePorts.technician}`,
-    serviceOperations: process.env.SERVICE_OPERATIONS_SERVICE_URL || `http://localhost:${defaultServicePorts.serviceOperations}`,
-    approval: process.env.APPROVAL_SERVICE_URL || `http://localhost:${defaultServicePorts.approval}`,
-    notification: process.env.NOTIFICATION_SERVICE_URL || `http://localhost:${defaultServicePorts.notification}`,
-    audit: process.env.AUDIT_SERVICE_URL || `http://localhost:${defaultServicePorts.audit}`,
-    reporting: process.env.REPORTING_SERVICE_URL || `http://localhost:${defaultServicePorts.reporting}`,
+    identity: process.env.IDENTITY_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.identity}`,
+    inventory: process.env.INVENTORY_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.inventory}`,
+    purchasing: process.env.PURCHASING_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.purchasing}`,
+    customer: process.env.CUSTOMER_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.customer}`,
+    sales: process.env.SALES_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.sales}`,
+    installment: process.env.INSTALLMENT_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.installment}`,
+    finance: process.env.FINANCE_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.finance}`,
+    technician: process.env.TECHNICIAN_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.technician}`,
+    serviceOperations: process.env.SERVICE_OPERATIONS_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.serviceOperations}`,
+    approval: process.env.APPROVAL_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.approval}`,
+    notification: process.env.NOTIFICATION_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.notification}`,
+    audit: process.env.AUDIT_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.audit}`,
+    reporting: process.env.REPORTING_SERVICE_URL || `http://127.0.0.1:${defaultServicePorts.reporting}`,
   };
 }
