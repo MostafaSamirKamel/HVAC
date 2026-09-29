@@ -1,0 +1,2 @@
+// Module: vendor-invoices
+export {};

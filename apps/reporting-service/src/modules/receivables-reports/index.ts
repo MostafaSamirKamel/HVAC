@@ -1,0 +1,2 @@
+// Module: receivables-reports
+export {};

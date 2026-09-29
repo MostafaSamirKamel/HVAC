@@ -1,0 +1,2 @@
+// Module: payment-allocations
+export {};

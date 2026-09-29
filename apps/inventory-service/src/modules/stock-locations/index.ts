@@ -1,0 +1,2 @@
+// Module: stock-locations
+export {};

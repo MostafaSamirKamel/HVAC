@@ -1,0 +1,2 @@
+// Module: customer-types
+export {};

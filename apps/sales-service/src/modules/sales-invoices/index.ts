@@ -1,0 +1,2 @@
+// Module: sales-invoices
+export {};

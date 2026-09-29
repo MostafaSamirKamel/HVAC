@@ -1,0 +1,2 @@
+// Module: stock-custody
+export {};

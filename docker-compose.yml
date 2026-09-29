@@ -1,0 +1,345 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------
+  # Core Infrastructure Services
+  # -------------------------------------------------------------
+  mongodb:
+    image: mongo:7.0
+    container_name: hvac_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: hvac_erp
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    volumes:
+      - mongodb_data:/data/db
+      - ./infrastructure/mongodb/replica-set/init-replica-set.js:/docker-entrypoint-initdb.d/init-replica-set.js:ro
+    healthcheck:
+      test: echo 'rs.status().ok || rs.initiate().ok' | mongosh --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: hvac_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: hvac_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # -------------------------------------------------------------
+  # Edge API Gateway (Stateless)
+  # -------------------------------------------------------------
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: hvac_api_gateway
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      JWT_SECRET: production-jwt-secret-replace-in-env
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+      REDIS_URI: redis://redis:6379
+      IDENTITY_SERVICE_URL: http://identity-service:4001
+      INVENTORY_SERVICE_URL: http://inventory-service:4002
+      PURCHASING_SERVICE_URL: http://purchasing-service:4003
+      CUSTOMER_SERVICE_URL: http://customer-service:4004
+      SALES_SERVICE_URL: http://sales-service:4005
+      INSTALLMENT_SERVICE_URL: http://installment-service:4006
+      FINANCE_SERVICE_URL: http://finance-service:4007
+      TECHNICIAN_SERVICE_URL: http://technician-service:4008
+      SERVICE_OPERATIONS_SERVICE_URL: http://service-operations-service:4009
+      APPROVAL_SERVICE_URL: http://approval-service:4010
+      NOTIFICATION_SERVICE_URL: http://notification-service:4011
+      AUDIT_SERVICE_URL: http://audit-service:4012
+      REPORTING_SERVICE_URL: http://reporting-service:4013
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # -------------------------------------------------------------
+  # 13 Domain Microservices
+  # -------------------------------------------------------------
+  identity-service:
+    build:
+      context: .
+      dockerfile: apps/identity-service/Dockerfile
+    container_name: hvac_identity_service
+    restart: unless-stopped
+    environment:
+      PORT: 4001
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_identity?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: apps/inventory-service/Dockerfile
+    container_name: hvac_inventory_service
+    restart: unless-stopped
+    environment:
+      PORT: 4002
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_inventory?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  purchasing-service:
+    build:
+      context: .
+      dockerfile: apps/purchasing-service/Dockerfile
+    container_name: hvac_purchasing_service
+    restart: unless-stopped
+    environment:
+      PORT: 4003
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_purchasing?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  customer-service:
+    build:
+      context: .
+      dockerfile: apps/customer-service/Dockerfile
+    container_name: hvac_customer_service
+    restart: unless-stopped
+    environment:
+      PORT: 4004
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_customer?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  sales-service:
+    build:
+      context: .
+      dockerfile: apps/sales-service/Dockerfile
+    container_name: hvac_sales_service
+    restart: unless-stopped
+    environment:
+      PORT: 4005
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_sales?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  installment-service:
+    build:
+      context: .
+      dockerfile: apps/installment-service/Dockerfile
+    container_name: hvac_installment_service
+    restart: unless-stopped
+    environment:
+      PORT: 4006
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_installment?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  finance-service:
+    build:
+      context: .
+      dockerfile: apps/finance-service/Dockerfile
+    container_name: hvac_finance_service
+    restart: unless-stopped
+    environment:
+      PORT: 4007
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_finance?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  technician-service:
+    build:
+      context: .
+      dockerfile: apps/technician-service/Dockerfile
+    container_name: hvac_technician_service
+    restart: unless-stopped
+    environment:
+      PORT: 4008
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_technician?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  service-operations-service:
+    build:
+      context: .
+      dockerfile: apps/service-operations-service/Dockerfile
+    container_name: hvac_service_operations_service
+    restart: unless-stopped
+    environment:
+      PORT: 4009
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_service_ops?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  approval-service:
+    build:
+      context: .
+      dockerfile: apps/approval-service/Dockerfile
+    container_name: hvac_approval_service
+    restart: unless-stopped
+    environment:
+      PORT: 4010
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_approval?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: apps/notification-service/Dockerfile
+    container_name: hvac_notification_service
+    restart: unless-stopped
+    environment:
+      PORT: 4011
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_notification?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  audit-service:
+    build:
+      context: .
+      dockerfile: apps/audit-service/Dockerfile
+    container_name: hvac_audit_service
+    restart: unless-stopped
+    environment:
+      PORT: 4012
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_audit?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  reporting-service:
+    build:
+      context: .
+      dockerfile: apps/reporting-service/Dockerfile
+    container_name: hvac_reporting_service
+    restart: unless-stopped
+    environment:
+      PORT: 4013
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/hvac_reporting?replicaSet=rs0
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      INTERNAL_SERVICE_SECRET: internal-service-secret-hvac-erp-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  mongodb_data:
+  redis_data:
+  rabbitmq_data:

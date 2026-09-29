@@ -1,0 +1,30 @@
+{
+  "name": "@hvac/redis",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@hvac/errors": "workspace:*",
+    "@hvac/logger": "workspace:*",
+    "ioredis": "^5.4.1"
+  },
+  "devDependencies": {
+    "@hvac/tsconfig": "workspace:*",
+    "@types/node": "^22.5.5",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.2"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  }
+}

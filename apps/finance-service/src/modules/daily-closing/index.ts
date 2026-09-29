@@ -1,0 +1,2 @@
+// Module: daily-closing
+export {};

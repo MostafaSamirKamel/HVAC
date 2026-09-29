@@ -1,0 +1,2 @@
+// Module: goods-receipts
+export {};

@@ -1,0 +1,2 @@
+// Module: journal-entries
+export {};

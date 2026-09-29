@@ -1,0 +1,2 @@
+// Module: treasury-ledger
+export {};

@@ -1,0 +1,2 @@
+// Module: deliveries
+export {};

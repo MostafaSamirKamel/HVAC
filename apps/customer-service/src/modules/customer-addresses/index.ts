@@ -1,0 +1,2 @@
+// Module: customer-addresses
+export {};

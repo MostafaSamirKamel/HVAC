@@ -1,0 +1,2 @@
+// Module: sales-orders
+export {};

@@ -1,0 +1,130 @@
+import express, { Express } from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import { createProxyMiddleware } from 'http-proxy-middleware';
+import { correlationIdMiddleware } from './middleware/correlation-id.middleware.js';
+import { authMiddleware } from './middleware/auth.middleware.js';
+import { rateLimiterMiddleware } from './middleware/rate-limiter.middleware.js';
+import { errorMiddleware } from './middleware/error.middleware.js';
+import { serviceEndpoints } from './config/services.js';
+import { logger } from './config/logger.js';
+import { MetricsCollector } from '@hvac/observability';
+
+let isReady = true;
+
+export function setReadiness(ready: boolean) {
+  isReady = ready;
+}
+
+export function createApp(): Express {
+  const app = express();
+
+  app.use(helmet());
+  app.use(cors());
+  app.use(correlationIdMiddleware);
+  app.use(rateLimiterMiddleware);
+
+  // Probes & Observability Endpoints (Rule 21 & Rule 22)
+  app.get('/health', (_req, res) => {
+    res.json({ status: 'ok', service: 'api-gateway', timestamp: new Date().toISOString() });
+  });
+
+  app.get('/health/live', (_req, res) => {
+    res.status(200).json({ status: 'alive', uptime: process.uptime() });
+  });
+
+  app.get('/health/ready', (_req, res) => {
+    if (isReady) {
+      return res.status(200).json({ status: 'ready' });
+    }
+    return res.status(503).json({ status: 'terminating' });
+  });
+
+  app.get('/metrics', (_req, res) => {
+    const metrics = MetricsCollector.flush();
+    res.json({ success: true, count: metrics.length, metrics });
+  });
+
+  // Public Auth proxy (Identity Service)
+  app.use(
+    '/api/v1/auth',
+    createProxyMiddleware({
+      target: serviceEndpoints.identity,
+      changeOrigin: true,
+      pathRewrite: (path) => `/api/v1/auth${path.startsWith('/') ? path : `/${path}`}`,
+      logger,
+      on: {
+        proxyReq: (proxyReq, req: any) => {
+          if (req.headers['x-correlation-id']) {
+            proxyReq.setHeader('x-correlation-id', req.headers['x-correlation-id']);
+          }
+        },
+      },
+    }),
+  );
+
+  // Protected proxies to domain microservices (Rules 1-13)
+  const protectedRoutes = [
+    { prefix: '/api/v1/users', target: serviceEndpoints.identity },
+    { prefix: '/api/v1/inventory', target: serviceEndpoints.inventory },
+    { prefix: '/api/v1/purchasing', target: serviceEndpoints.purchasing },
+    { prefix: '/api/v1/customers', target: serviceEndpoints.customer },
+    { prefix: '/api/v1/sales', target: serviceEndpoints.sales },
+    { prefix: '/api/v1/installments', target: serviceEndpoints.installment },
+    { prefix: '/api/v1/finance', target: serviceEndpoints.finance },
+    { prefix: '/api/v1/technicians', target: serviceEndpoints.technician },
+    { prefix: '/api/v1/service-ops', target: serviceEndpoints.serviceOperations },
+    { prefix: '/api/v1/approvals', target: serviceEndpoints.approval },
+    { prefix: '/api/v1/notifications', target: serviceEndpoints.notification },
+    { prefix: '/api/v1/audit', target: serviceEndpoints.audit },
+    { prefix: '/api/v1/reports', target: serviceEndpoints.reporting },
+  ];
+
+  for (const route of protectedRoutes) {
+    app.use(
+      route.prefix,
+      authMiddleware,
+      createProxyMiddleware({
+        target: route.target,
+        changeOrigin: true,
+        pathRewrite: (path) => `${route.prefix}${path.startsWith('/') ? path : `/${path}`}`,
+        logger,
+        on: {
+          proxyReq: (proxyReq, req: any) => {
+            if (req.headers['x-internal-token']) {
+              proxyReq.setHeader('x-internal-token', req.headers['x-internal-token']);
+            }
+            if (req.headers['x-correlation-id']) {
+              proxyReq.setHeader('x-correlation-id', req.headers['x-correlation-id']);
+            }
+            if (req.headers['x-user-id']) {
+              proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
+            }
+            if (req.headers['x-company-id']) {
+              proxyReq.setHeader('x-company-id', req.headers['x-company-id']);
+            }
+            if (req.headers['x-branch-id']) {
+              proxyReq.setHeader('x-branch-id', req.headers['x-branch-id']);
+            }
+          },
+        },
+      }),
+    );
+  }
+
+  // 404 handler for unknown routes
+  app.use((_req, res) => {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Endpoint not found on API Gateway',
+      },
+    });
+  });
+
+  // Centralized Error middleware
+  app.use(errorMiddleware);
+
+  return app;
+}
