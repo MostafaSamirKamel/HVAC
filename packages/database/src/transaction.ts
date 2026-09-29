@@ -32,6 +32,20 @@ export async function withTransaction<T>(
     return operation(mockSession);
   }
 
+  // Check if connected MongoDB deployment supports multi-document transactions
+  const client = conn.getClient() as unknown as { topology?: { description?: { type?: string } } };
+  const topologyType = client?.topology?.description?.type;
+  if (topologyType === 'Single') {
+    const standaloneSession = {
+      startTransaction: () => {},
+      commitTransaction: async () => {},
+      abortTransaction: async () => {},
+      endSession: async () => {},
+      inTransaction: () => false,
+    } as unknown as ClientSession;
+    return operation(standaloneSession);
+  }
+
   const session = await conn.startSession();
 
   try {

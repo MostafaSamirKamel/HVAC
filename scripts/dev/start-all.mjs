@@ -12,6 +12,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '../..');
 
+try {
+  process.loadEnvFile(path.resolve(rootDir, '.env'));
+} catch (e) {
+  // .env file is optional if env vars are already set in environment
+}
+
 const isDev = process.argv.includes('--dev');
 
 const SERVICES = [
@@ -87,7 +93,7 @@ for (const service of SERVICES) {
 
   const env = {
     ...process.env,
-    PORT: String(service.port),
+    PORT: service.name === 'api-gateway' && process.env.PORT ? process.env.PORT : String(service.port),
   };
 
   const proc = spawn(command, args, {
