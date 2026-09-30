@@ -16,7 +16,7 @@ export interface InternalTokenPayload {
 
 export function verifyInternalToken(
   token: string,
-  secret: string = process.env.INTERNAL_SERVICE_SECRET || 'internal-service-secret-hvac-erp-key-2026',
+  secret: string = process.env.INTERNAL_SERVICE_SECRET || 'hvac-internal-signed-token-secret-minimum-32-chars',
 ): AuthContext {
   try {
     const decoded = jwt.verify(token, secret) as InternalTokenPayload;

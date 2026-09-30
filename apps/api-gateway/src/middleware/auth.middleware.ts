@@ -53,7 +53,7 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
 
     const userId = decoded.userId || (decoded as any).sub;
 
-    const internalSecret = process.env.INTERNAL_SERVICE_SECRET || 'internal-service-secret-hvac-erp-key-2026';
+    const internalSecret = process.env.INTERNAL_SERVICE_SECRET || 'hvac-internal-signed-token-secret-minimum-32-chars';
     const correlationId = CorrelationManager.getCorrelationId();
 
     // Generate short-lived signed internal token (60 seconds)

@@ -129,10 +129,10 @@ async function runTest() {
   const customerPayload = {
     name: 'شركة النيل للمقاولات العامة والتوريدات الهندسية',
     type: 'COMMERCIAL',
-    taxNumber: '456-789-123',
-    commercialRegister: 'CR-78421',
-    phone: '01009876543',
-    email: 'contracts@al-nile-eng.com',
+    taxNumber: `456-789-${Date.now().toString().slice(-3)}`,
+    commercialRegister: `CR-${Date.now().toString().slice(-5)}`,
+    phone: `010${Math.floor(10000000 + Math.random() * 90000000)}`,
+    email: `contracts-${Date.now().toString().slice(-4)}@al-nile-eng.com`,
     branchId: 'br_cairo_main',
     creditLimit: '500000.00',
     initialAddress: {
@@ -154,9 +154,10 @@ async function runTest() {
   } else {
     // If already exists or error, list customers
     const listCust = await request('GET', '/api/v1/customers', null, accessToken);
-    if (listCust.ok && listCust.body.data?.items?.length > 0) {
-      customerId = listCust.body.data.items[0].customerId;
-      logResult(true, `Customer retrieved from database: ${customerId}`, listCust.body.data.items[0]);
+    const existingList = Array.isArray(listCust.body?.data) ? listCust.body.data : listCust.body?.data?.items;
+    if (listCust.ok && existingList?.length > 0) {
+      customerId = existingList[0].customerId;
+      logResult(true, `Customer retrieved from database: ${customerId}`, existingList[0]);
     } else {
       logResult(false, `Failed to create/retrieve customer: ${custRes.status}`, custRes.body);
     }

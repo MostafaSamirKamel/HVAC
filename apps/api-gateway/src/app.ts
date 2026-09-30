@@ -46,15 +46,35 @@ export function createApp(): Express {
   });
 
   app.get('/health/system', async (_req, res) => {
-    let identityPing: any = null;
-    try {
-      const resp = await fetch('http://127.0.0.1:4001/health/ready', {
-        signal: AbortSignal.timeout(3000),
-      });
-      identityPing = { status: resp.status, body: await resp.json().catch(async () => await resp.text()) };
-    } catch (err: any) {
-      identityPing = { error: err.message, code: err.code };
-    }
+    const services = [
+      { name: 'identity', port: 4001 },
+      { name: 'inventory', port: 4002 },
+      { name: 'purchasing', port: 4003 },
+      { name: 'customer', port: 4004 },
+      { name: 'sales', port: 4005 },
+      { name: 'installment', port: 4006 },
+      { name: 'finance', port: 4007 },
+      { name: 'technician', port: 4008 },
+      { name: 'service-ops', port: 4009 },
+      { name: 'approval', port: 4010 },
+      { name: 'notification', port: 4011 },
+      { name: 'audit', port: 4012 },
+      { name: 'reporting', port: 4013 },
+    ];
+
+    const pingResults = await Promise.all(
+      services.map(async (svc) => {
+        try {
+          const resp = await fetch(`http://127.0.0.1:${svc.port}/health/ready`, {
+            signal: AbortSignal.timeout(2000),
+          });
+          const body = await resp.json().catch(async () => await resp.text());
+          return { service: svc.name, port: svc.port, status: resp.status, ok: resp.ok, body };
+        } catch (err: any) {
+          return { service: svc.name, port: svc.port, error: err.message, code: err.code };
+        }
+      }),
+    );
 
     const envKeys = Object.keys(process.env).filter(
       (k) =>
@@ -75,7 +95,7 @@ export function createApp(): Express {
     res.json({
       gateway: 'ok',
       uptime: process.uptime(),
-      identityPing,
+      services: pingResults,
       environment: maskedEnv,
     });
   });
