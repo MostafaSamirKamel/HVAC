@@ -10,7 +10,7 @@
     "pnpm": ">=9.0.0"
   },
   "scripts": {
-    "start": "node scripts/dev/start-all.mjs",
+    "start": "node scripts/prod/start-unified.mjs",
     "start:dev": "node scripts/dev/start-all.mjs --dev",
     "build": "turbo run build",
     "dev": "turbo run dev",

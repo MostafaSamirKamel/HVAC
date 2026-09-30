@@ -22,6 +22,14 @@ try {
 
 const isDev = process.argv.includes('--dev');
 
+if (!isDev) {
+  // In production (Railway container), run the unified runner in a single process
+  // to prevent OOM Killer / SIGKILL container crashes on memory-constrained plans.
+  await import('../prod/start-unified.mjs');
+  // Prevent executing the multi-process spawner below
+  await new Promise(() => {});
+}
+
 const SERVICES = [
   { name: 'api-gateway', path: 'apps/api-gateway', port: 3000, color: '\x1b[36m' },
   { name: 'identity-service', path: 'apps/identity-service', port: 4001, color: '\x1b[32m' },
