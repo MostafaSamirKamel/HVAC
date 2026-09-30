@@ -45,6 +45,41 @@ export function createApp(): Express {
     res.json({ success: true, count: metrics.length, metrics });
   });
 
+  app.get('/health/system', async (_req, res) => {
+    let identityPing: any = null;
+    try {
+      const resp = await fetch('http://127.0.0.1:4001/health/ready', {
+        signal: AbortSignal.timeout(3000),
+      });
+      identityPing = { status: resp.status, body: await resp.json().catch(async () => await resp.text()) };
+    } catch (err: any) {
+      identityPing = { error: err.message, code: err.code };
+    }
+
+    const envKeys = Object.keys(process.env).filter(
+      (k) =>
+        k.startsWith('MONGO') ||
+        k.startsWith('REDIS') ||
+        k.startsWith('RABBIT') ||
+        k.startsWith('IDENTITY') ||
+        k === 'PORT' ||
+        k === 'NODE_ENV',
+    );
+
+    const maskedEnv: Record<string, string> = {};
+    for (const k of envKeys) {
+      const v = process.env[k] || '';
+      maskedEnv[k] = v.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:***@');
+    }
+
+    res.json({
+      gateway: 'ok',
+      uptime: process.uptime(),
+      identityPing,
+      environment: maskedEnv,
+    });
+  });
+
   // Public Auth proxy (Identity Service)
   app.use(
     '/api/v1/auth',

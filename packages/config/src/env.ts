@@ -20,8 +20,22 @@ export function normalizeEnv(
 ): Record<string, string | undefined> {
   const env = { ...rawEnv };
 
-  // 1. Resolve MongoDB URI from MONGO_URI, MONGO_URL, or MONGO_PRIVATE_URL (Railway)
-  const rawMongo = env.MONGO_URI || env.MONGO_URL || env.MONGO_PRIVATE_URL;
+  // 1. Resolve MongoDB URI
+  let rawMongo = env.MONGO_URI || env.MONGO_URL || env.MONGO_PRIVATE_URL;
+  if (rawMongo && (rawMongo.startsWith('${{') || rawMongo.includes('${{'))) {
+    rawMongo = undefined;
+  }
+  if (!rawMongo && (env.MONGOHOST || env.MONGO_HOST)) {
+    const host = env.MONGOHOST || env.MONGO_HOST;
+    const port = env.MONGOPORT || env.MONGO_PORT || '27017';
+    const user = env.MONGOUSER || env.MONGO_USER || env.MONGO_INITDB_ROOT_USERNAME;
+    const pass = env.MONGOPASSWORD || env.MONGO_PASSWORD || env.MONGO_INITDB_ROOT_PASSWORD;
+    if (user && pass) {
+      rawMongo = `mongodb://${encodeURIComponent(user)}:${encodeURIComponent(pass)}@${host}:${port}/hvac_erp?authSource=admin`;
+    } else {
+      rawMongo = `mongodb://${host}:${port}/hvac_erp`;
+    }
+  }
   if (rawMongo) {
     let normalized = rawMongo.trim();
     const match = normalized.match(/^(mongodb(?:\+srv)?:\/\/[^\/?#]+)(\/?[^?#]*)(\?.*)?$/i);
@@ -42,15 +56,39 @@ export function normalizeEnv(
     env.MONGO_URL = normalized;
   }
 
-  // 2. Resolve Redis URI from REDIS_URI, REDIS_URL, or REDIS_PRIVATE_URL (Railway)
-  const rawRedis = env.REDIS_URI || env.REDIS_URL || env.REDIS_PRIVATE_URL;
+  // 2. Resolve Redis URI
+  let rawRedis = env.REDIS_URI || env.REDIS_URL || env.REDIS_PRIVATE_URL;
+  if (rawRedis && (rawRedis.startsWith('${{') || rawRedis.includes('${{'))) {
+    rawRedis = undefined;
+  }
+  if (!rawRedis && (env.REDISHOST || env.REDIS_HOST)) {
+    const host = env.REDISHOST || env.REDIS_HOST;
+    const port = env.REDISPORT || env.REDIS_PORT || '6379';
+    const user = env.REDISUSER || env.REDIS_USER || 'default';
+    const pass = env.REDISPASSWORD || env.REDIS_PASSWORD;
+    if (pass) {
+      rawRedis = `redis://${encodeURIComponent(user)}:${encodeURIComponent(pass)}@${host}:${port}`;
+    } else {
+      rawRedis = `redis://${host}:${port}`;
+    }
+  }
   if (rawRedis) {
     env.REDIS_URI = rawRedis.trim();
     env.REDIS_URL = rawRedis.trim();
   }
 
-  // 3. Resolve RabbitMQ URL from RABBITMQ_URL or RABBITMQ_PRIVATE_URL (Railway)
-  const rawRabbit = env.RABBITMQ_URL || env.RABBITMQ_PRIVATE_URL;
+  // 3. Resolve RabbitMQ URL
+  let rawRabbit = env.RABBITMQ_URL || env.RABBITMQ_PRIVATE_URL;
+  if (rawRabbit && (rawRabbit.startsWith('${{') || rawRabbit.includes('${{'))) {
+    rawRabbit = undefined;
+  }
+  if (!rawRabbit && (env.RABBITMQHOST || env.RABBITMQ_HOST)) {
+    const host = env.RABBITMQHOST || env.RABBITMQ_HOST;
+    const port = env.RABBITMQPORT || env.RABBITMQ_PORT || '5672';
+    const user = env.RABBITMQUSER || env.RABBITMQ_USER || env.RABBITMQ_DEFAULT_USER || 'guest';
+    const pass = env.RABBITMQPASSWORD || env.RABBITMQ_PASSWORD || env.RABBITMQ_DEFAULT_PASS || 'guest';
+    rawRabbit = `amqp://${encodeURIComponent(user)}:${encodeURIComponent(pass)}@${host}:${port}`;
+  }
   if (rawRabbit) {
     env.RABBITMQ_URL = rawRabbit.trim();
   }
