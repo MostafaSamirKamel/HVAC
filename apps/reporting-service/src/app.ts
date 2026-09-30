@@ -55,6 +55,7 @@ export function createApp(): Express {
   app.use('/reports', reportingRoutes);
 
   // Domain API Routes
+  app.use('/api/v1/reports', reportingRoutes);
   app.use('/api/v1/reports/dashboard', reportingRoutes);
   app.use('/api/v1/reports/sales', salesReportRoutes);
   app.use('/api/v1/reports/inventory', inventoryReportRoutes);

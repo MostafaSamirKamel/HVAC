@@ -41,6 +41,9 @@ export class AuthContext {
   }
 
   public requirePermission(permission: string): void {
+    if (this.branchScope.isSuperAdmin || this.permissions.has('*') || this.permissions.has('admin')) {
+      return;
+    }
     if (!this.permissions.has(permission)) {
       throw new AuthorizationError(`Missing required permission: ${permission}`);
     }

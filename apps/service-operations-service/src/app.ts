@@ -54,6 +54,10 @@ export function createApp(): Express {
   app.use('/api/v1/service/warranties', warrantyRoutes);
   app.use('/api/v1/service/tickets', serviceTicketRoutes);
 
+  app.use('/api/v1/service-ops/work-orders', workOrderRoutes);
+  app.use('/api/v1/service-ops/warranties', warrantyRoutes);
+  app.use('/api/v1/service-ops/tickets', serviceTicketRoutes);
+
   // 404 Handler
   app.use((_req: Request, res: Response) => {
     res.status(404).json({
