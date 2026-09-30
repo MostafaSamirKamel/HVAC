@@ -1,4 +1,7 @@
 import express, { Express } from 'express';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import helmet from 'helmet';
 import cors from 'cors';
 import { createProxyMiddleware } from 'http-proxy-middleware';
@@ -92,10 +95,19 @@ export function createApp(): Express {
       maskedEnv[k] = v.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:***@');
     }
 
+    let processLogs: Record<string, any> = {};
+    try {
+      const statusFile = path.join(os.tmpdir(), 'hvac-services.json');
+      if (fs.existsSync(statusFile)) {
+        processLogs = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+      }
+    } catch {}
+
     res.json({
       gateway: 'ok',
       uptime: process.uptime(),
       services: pingResults,
+      processLogs,
       environment: maskedEnv,
     });
   });

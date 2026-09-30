@@ -7,6 +7,8 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
+import os from 'node:os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -158,14 +160,32 @@ if (resolvedMongo) {
   console.log(`${BOLD}Detected MongoDB URL:${RESET} ${masked}`);
 }
 
+const serviceLogs = {};
+for (const s of SERVICES) {
+  serviceLogs[s.name] = { status: 'starting', logs: [] };
+}
+
+function recordLog(serviceName, line, isError = false) {
+  const entry = serviceLogs[serviceName];
+  if (!entry) return;
+  if (entry.logs.length >= 20) entry.logs.shift();
+  entry.logs.push((isError ? '[ERR] ' : '') + line);
+}
+
+function flushStatus() {
+  try {
+    const statusFile = path.join(os.tmpdir(), 'hvac-services.json');
+    fs.writeFileSync(statusFile, JSON.stringify(serviceLogs, null, 2));
+  } catch {}
+}
+setInterval(flushStatus, 2000);
+
 function spawnService(service) {
   const serviceDir = path.resolve(rootDir, service.path);
   const prefix = `${service.color}[${service.name}]${RESET} `;
 
   const command = isDev ? (process.platform === 'win32' ? 'npx.cmd' : 'npx') : 'node';
-  const args = isDev
-    ? ['tsx', 'watch', 'src/server.ts']
-    : ['--max-old-space-size=80', 'dist/server.js'];
+  const args = isDev ? ['tsx', 'watch', 'src/server.ts'] : ['dist/server.js'];
 
   const env = {
     ...process.env,
@@ -189,11 +209,16 @@ function spawnService(service) {
     children.push({ proc, name: service.name });
   }
 
+  if (serviceLogs[service.name]) {
+    serviceLogs[service.name].status = 'running';
+  }
+
   proc.stdout.on('data', (data) => {
     const lines = data.toString().trim().split('\n');
     for (const line of lines) {
       if (line.trim()) {
         console.log(`${prefix}${line}`);
+        recordLog(service.name, line.trim(), false);
       }
     }
   });
@@ -203,11 +228,16 @@ function spawnService(service) {
     for (const line of lines) {
       if (line.trim()) {
         console.error(`${prefix}\x1b[31m${line}${RESET}`);
+        recordLog(service.name, line.trim(), true);
       }
     }
   });
 
   proc.on('exit', (code, signal) => {
+    if (serviceLogs[service.name]) {
+      serviceLogs[service.name].status = `exited (${code})`;
+      recordLog(service.name, `Process exited with code ${code}, signal: ${signal}`, true);
+    }
     if (!isTerminating) {
       console.error(`${prefix}Exited with code ${code}, signal: ${signal}. Restarting in 2s...`);
       setTimeout(() => spawnService(service), 2000);
