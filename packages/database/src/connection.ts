@@ -11,7 +11,8 @@ export async function connectDatabase(
   uri: string,
   options: DatabaseConnectionOptions = {},
 ): Promise<Connection> {
-  const service = options.serviceName || 'unknown-service';
+  const { serviceName, ...mongoOptions } = options;
+  const service = serviceName || 'unknown-service';
 
   const defaultOptions: ConnectOptions = {
     maxPoolSize: 50,
@@ -21,7 +22,7 @@ export async function connectDatabase(
     connectTimeoutMS: 10000,
     retryWrites: true,
     w: 'majority',
-    ...options,
+    ...mongoOptions,
   };
 
   try {

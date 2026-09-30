@@ -33,8 +33,10 @@ export class AuthContext {
       companyId: payload.companyId,
       userBranchId: payload.branchId,
       allowedBranchIds: payload.allowedBranchIds,
-      userId: payload.userId,
-      isSuperAdmin: payload.isSuperAdmin || this.roles.includes('superadmin'),
+      isSuperAdmin:
+        !!payload.isSuperAdmin ||
+        this.roles.map((r) => r.toUpperCase()).includes('SUPER_ADMIN') ||
+        this.roles.includes('superadmin'),
     });
   }
 

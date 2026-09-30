@@ -35,18 +35,18 @@ export async function withTransaction<T>(
   // Check if connected MongoDB deployment supports multi-document transactions
   const client = conn.getClient() as unknown as { topology?: { description?: { type?: string } } };
   const topologyType = client?.topology?.description?.type;
-  if (topologyType === 'Single') {
-    const standaloneSession = {
-      startTransaction: () => {},
-      commitTransaction: async () => {},
-      abortTransaction: async () => {},
-      endSession: async () => {},
-      inTransaction: () => false,
-    } as unknown as ClientSession;
-    return operation(standaloneSession);
+  const isReplicaSetOrSharded = topologyType?.includes('ReplicaSet') || topologyType === 'Sharded';
+  if (!isReplicaSetOrSharded) {
+    // Standalone MongoDB (Single) does not support multi-document transactions
+    return operation(undefined as unknown as ClientSession);
   }
 
-  const session = await conn.startSession();
+  let session: ClientSession;
+  try {
+    session = await conn.startSession();
+  } catch {
+    return operation(undefined as unknown as ClientSession);
+  }
 
   try {
     session.startTransaction({

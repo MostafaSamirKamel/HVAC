@@ -9,6 +9,15 @@ const CreateCompanySchema = z.object({
   commercialRegistrationNumber: z.string().optional(),
   taxNumber: z.string().optional(),
   currency: z.string().default('EGP'),
+  adminUser: z
+    .object({
+      username: z.string().min(3, 'Username must be at least 3 characters'),
+      email: z.string().email('Valid email required'),
+      password: z.string().min(6, 'Password must be at least 6 characters'),
+      fullName: z.string().min(2, 'Full name required'),
+      phone: z.string().optional(),
+    })
+    .optional(),
 });
 
 export class CompanyController {

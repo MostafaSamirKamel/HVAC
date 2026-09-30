@@ -63,9 +63,45 @@ export function createApp(): Express {
     }),
   );
 
+  // Public/Protected Companies proxy (Identity Service)
+  app.use(
+    '/api/v1/companies',
+    (req, res, next) => {
+      // Allow public creation of companies (onboarding)
+      if (req.method === 'POST') {
+        return next();
+      }
+      return authMiddleware(req, res, next);
+    },
+    createProxyMiddleware({
+      target: serviceEndpoints.identity,
+      changeOrigin: true,
+      pathRewrite: (path) => `/api/v1/companies${path.startsWith('/') ? path : `/${path}`}`,
+      logger,
+      on: {
+        proxyReq: (proxyReq, req: any) => {
+          if (req.headers['x-internal-token']) {
+            proxyReq.setHeader('x-internal-token', req.headers['x-internal-token']);
+          }
+          if (req.headers['x-correlation-id']) {
+            proxyReq.setHeader('x-correlation-id', req.headers['x-correlation-id']);
+          }
+          if (req.headers['x-user-id']) {
+            proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
+          }
+          if (req.headers['x-company-id']) {
+            proxyReq.setHeader('x-company-id', req.headers['x-company-id']);
+          }
+        },
+      },
+    }),
+  );
+
   // Protected proxies to domain microservices (Rules 1-13)
   const protectedRoutes = [
     { prefix: '/api/v1/users', target: serviceEndpoints.identity },
+    { prefix: '/api/v1/branches', target: serviceEndpoints.identity },
+    { prefix: '/api/v1/roles', target: serviceEndpoints.identity },
     { prefix: '/api/v1/inventory', target: serviceEndpoints.inventory },
     { prefix: '/api/v1/purchasing', target: serviceEndpoints.purchasing },
     { prefix: '/api/v1/customers', target: serviceEndpoints.customer },
@@ -92,19 +128,19 @@ export function createApp(): Express {
         on: {
           proxyReq: (proxyReq, req: any) => {
             if (req.headers['x-internal-token']) {
-              proxyReq.setHeader('x-internal-token', req.headers['x-internal-token']);
+              proxyReq.setHeader('x-internal-token', String(req.headers['x-internal-token']));
             }
             if (req.headers['x-correlation-id']) {
-              proxyReq.setHeader('x-correlation-id', req.headers['x-correlation-id']);
+              proxyReq.setHeader('x-correlation-id', String(req.headers['x-correlation-id']));
             }
             if (req.headers['x-user-id']) {
-              proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
+              proxyReq.setHeader('x-user-id', String(req.headers['x-user-id']));
             }
             if (req.headers['x-company-id']) {
-              proxyReq.setHeader('x-company-id', req.headers['x-company-id']);
+              proxyReq.setHeader('x-company-id', String(req.headers['x-company-id']));
             }
             if (req.headers['x-branch-id']) {
-              proxyReq.setHeader('x-branch-id', req.headers['x-branch-id']);
+              proxyReq.setHeader('x-branch-id', String(req.headers['x-branch-id']));
             }
           },
         },

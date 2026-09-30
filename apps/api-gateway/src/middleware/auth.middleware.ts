@@ -51,13 +51,15 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
 
     req.user = decoded;
 
+    const userId = decoded.userId || (decoded as any).sub;
+
     const internalSecret = process.env.INTERNAL_SERVICE_SECRET || 'internal-service-secret-hvac-erp-key-2026';
     const correlationId = CorrelationManager.getCorrelationId();
 
     // Generate short-lived signed internal token (60 seconds)
     const internalToken = jwt.sign(
       {
-        sub: decoded.userId,
+        sub: userId,
         email: decoded.email,
         companyId: decoded.companyId,
         branchId: decoded.branchId,
@@ -65,6 +67,9 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
         roles: decoded.roles || [],
         permissions: decoded.permissions || [],
         permissionVersion: decoded.permissionVersion || 1,
+        isSuperAdmin:
+          !!(decoded as any).isSuperAdmin ||
+          (decoded.roles || []).map((r) => r.toUpperCase()).includes('SUPER_ADMIN'),
         correlationId,
       },
       internalSecret,
@@ -74,9 +79,9 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
     // Propagate signed internal token and correlation headers to downstream services
     req.headers['x-internal-token'] = internalToken;
     req.headers['x-correlation-id'] = correlationId;
-    req.headers['x-user-id'] = decoded.userId;
-    req.headers['x-company-id'] = decoded.companyId;
-    if (decoded.branchId) req.headers['x-branch-id'] = decoded.branchId;
+    if (userId) req.headers['x-user-id'] = String(userId);
+    if (decoded.companyId) req.headers['x-company-id'] = String(decoded.companyId);
+    if (decoded.branchId) req.headers['x-branch-id'] = String(decoded.branchId);
 
     next();
   } catch (err: any) {
