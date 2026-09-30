@@ -84,6 +84,39 @@ function shutdownAll(signal) {
 process.on('SIGINT', () => shutdownAll('SIGINT'));
 process.on('SIGTERM', () => shutdownAll('SIGTERM'));
 
+// 1. Resolve MongoDB URL for Cloud / Railway
+const rawMongo = process.env.MONGO_URI || process.env.MONGO_URL || process.env.MONGO_PRIVATE_URL;
+let resolvedMongo = rawMongo;
+if (rawMongo) {
+  let normalized = rawMongo.trim();
+  const match = normalized.match(/^(mongodb(?:\+srv)?:\/\/[^\/?#]+)(\/?[^?#]*)(\?.*)?$/i);
+  if (match) {
+    const base = match[1];
+    let path = match[2];
+    let query = match[3] || '';
+    if (!path || path === '/') {
+      path = '/hvac_erp';
+    }
+    const hasCredentials = /:\/\/[^@]+@/.test(base);
+    if (hasCredentials && !query.includes('authSource=')) {
+      query = query ? `${query}&authSource=admin` : '?authSource=admin';
+    }
+    normalized = `${base}${path}${query}`;
+  }
+  resolvedMongo = normalized;
+}
+
+// 2. Resolve Redis URL
+const resolvedRedis = (process.env.REDIS_URI || process.env.REDIS_URL || process.env.REDIS_PRIVATE_URL || '').trim();
+
+// 3. Resolve RabbitMQ URL
+const resolvedRabbit = (process.env.RABBITMQ_URL || process.env.RABBITMQ_PRIVATE_URL || '').trim();
+
+if (resolvedMongo) {
+  const masked = resolvedMongo.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@');
+  console.log(`${BOLD}Detected MongoDB URL:${RESET} ${masked}`);
+}
+
 for (const service of SERVICES) {
   const serviceDir = path.resolve(rootDir, service.path);
   const prefix = `${service.color}[${service.name}]${RESET} `;
@@ -94,6 +127,9 @@ for (const service of SERVICES) {
   const env = {
     ...process.env,
     PORT: service.name === 'api-gateway' && process.env.PORT ? process.env.PORT : String(service.port),
+    ...(resolvedMongo ? { MONGO_URI: resolvedMongo, MONGO_URL: resolvedMongo } : {}),
+    ...(resolvedRedis ? { REDIS_URI: resolvedRedis, REDIS_URL: resolvedRedis } : {}),
+    ...(resolvedRabbit ? { RABBITMQ_URL: resolvedRabbit } : {}),
   };
 
   const proc = spawn(command, args, {

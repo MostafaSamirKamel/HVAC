@@ -23,7 +23,7 @@ async function bootstrap() {
   }
 
   // 3. Start HTTP server
-  const server = app.listen(env.PORT, () => {
+  const server = app.listen(env.PORT, '0.0.0.0', () => {
     setReadiness(true);
     logger.info(`🚀 Finance & Treasury Service running on port ${env.PORT} [${env.NODE_ENV}]`);
   });

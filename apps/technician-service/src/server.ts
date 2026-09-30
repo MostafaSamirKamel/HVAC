@@ -7,7 +7,7 @@ const logger = createLogger({ serviceName: 'technician-service' });
 async function bootstrap() {
   const app = createApp();
 
-  const server = app.listen(env.PORT, () => {
+  const server = app.listen(env.PORT, '0.0.0.0', () => {
     logger.info(`🚀 technician-service running on port ${env.PORT} [${env.NODE_ENV}]`);
   });
 
