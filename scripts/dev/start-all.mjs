@@ -158,12 +158,14 @@ if (resolvedMongo) {
   console.log(`${BOLD}Detected MongoDB URL:${RESET} ${masked}`);
 }
 
-for (const service of SERVICES) {
+function spawnService(service) {
   const serviceDir = path.resolve(rootDir, service.path);
   const prefix = `${service.color}[${service.name}]${RESET} `;
 
   const command = isDev ? (process.platform === 'win32' ? 'npx.cmd' : 'npx') : 'node';
-  const args = isDev ? ['tsx', 'watch', 'src/server.ts'] : ['dist/server.js'];
+  const args = isDev
+    ? ['tsx', 'watch', 'src/server.ts']
+    : ['--max-old-space-size=80', 'dist/server.js'];
 
   const env = {
     ...process.env,
@@ -180,7 +182,12 @@ for (const service of SERVICES) {
     shell: isDev && process.platform === 'win32',
   });
 
-  children.push({ proc, name: service.name });
+  const childIndex = children.findIndex((c) => c.name === service.name);
+  if (childIndex >= 0) {
+    children[childIndex] = { proc, name: service.name };
+  } else {
+    children.push({ proc, name: service.name });
+  }
 
   proc.stdout.on('data', (data) => {
     const lines = data.toString().trim().split('\n');
@@ -200,11 +207,19 @@ for (const service of SERVICES) {
     }
   });
 
-  proc.on('exit', (code) => {
-    if (!isTerminating && code !== 0) {
-      console.error(`${prefix}Exited with code ${code}`);
+  proc.on('exit', (code, signal) => {
+    if (!isTerminating) {
+      console.error(`${prefix}Exited with code ${code}, signal: ${signal}. Restarting in 2s...`);
+      setTimeout(() => spawnService(service), 2000);
     }
   });
+}
+
+// Staggered boot sequence (250ms interval) to prevent connection storms
+let delay = 0;
+for (const service of SERVICES) {
+  setTimeout(() => spawnService(service), delay);
+  delay += 250;
 }
 
 console.log(`${BOLD}${GREEN}✔ All 14 microservices spawned successfully.${RESET}`);

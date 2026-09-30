@@ -15,8 +15,8 @@ export async function connectDatabase(
   const service = serviceName || 'unknown-service';
 
   const defaultOptions: ConnectOptions = {
-    maxPoolSize: 50,
-    minPoolSize: 5,
+    maxPoolSize: 10,
+    minPoolSize: 1,
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
     connectTimeoutMS: 10000,
